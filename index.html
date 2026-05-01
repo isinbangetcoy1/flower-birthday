@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Dancing+Script:wght@600&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
     
+    <script src="https://unpkg.com/typed.js@2.1.0/dist/typed.umd.js"></script>
+
     <style>
         body {
             background-color: #0d1117; 
@@ -19,7 +21,6 @@
         .font-handwriting { font-family: 'Dancing Script', cursive; }
         .font-sans { font-family: 'Poppins', sans-serif; }
 
-        /* HANYA ANIMASI MERAMBAT (Rontok diurus oleh JS agar nyambung) */
         @keyframes creepBloom {
             0% { 
                 opacity: 0; 
@@ -51,13 +52,15 @@
 </head>
 <body class="relative min-h-screen flex items-center justify-center">
 
+    <audio id="bg-music" src="laura_palmer.mp3" preload="auto"></audio>
+
     <div id="flower-container" class="absolute inset-0 pointer-events-none z-40"></div>
 
     <div id="envelope" class="envelope-transition flex flex-col items-center justify-center cursor-pointer z-50" onclick="startSequence()">
         <div class="w-72 h-48 sm:w-80 sm:h-52 bg-[#1e293b] rounded-md shadow-2xl relative flex items-center justify-center border border-slate-700 hover:-translate-y-2 transition-transform duration-300">
-            <div class="absolute top-0 left-0 w-full h-1/2 border-b border-slate-700 bg-[#162032] origin-top" style="clip-path: polygon(0 0, 100% 0, 50% 100%); z-index: 10;"></div>
+            <div id="flap" class="absolute top-0 left-0 w-full h-1/2 border-b border-slate-700 bg-[#162032] origin-top transition-transform duration-[800ms] ease-in-out" style="clip-path: polygon(0 0, 100% 0, 50% 100%); z-index: 10;"></div>
             
-            <div class="wax-seal w-12 h-12 rounded-full absolute z-20 flex items-center justify-center text-white/70 text-xl font-serif">✦</div>
+            <div id="seal" class="wax-seal w-12 h-12 rounded-full absolute z-20 flex items-center justify-center text-white/70 text-xl font-serif transition-opacity duration-300">✦</div>
 
             <div class="absolute bottom-6 w-full text-center z-20">
                 <p class="text-slate-400 text-xs tracking-[0.2em] mb-1">FOR</p>
@@ -69,7 +72,6 @@
 
     <div id="letter" class="hidden letter-transition opacity-0 translate-y-24 absolute w-11/12 max-w-2xl max-h-[85vh] overflow-y-auto bg-[#111827]/95 backdrop-blur-xl p-8 sm:p-12 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800 z-30">
         
-        <!-- Bagian Judul (Ubah dari yang sedih jadi lebih ceria) -->
         <div class="text-center mb-8 border-b border-slate-800 pb-6">
             <h1 class="font-serif text-3xl sm:text-4xl text-[#e2e8f0] mb-3 italic">Happy BirthDay!</h1>
             <p class="text-slate-500 text-[10px] sm:text-xs tracking-widest font-sans uppercase">1 Juni 2026</p>
@@ -77,16 +79,10 @@
 
         <h2 class="font-handwriting text-4xl sm:text-5xl text-[#64748b] mb-6 border-b border-slate-800 inline-block pr-8">Dearest Auliya,</h2>
 
-        <!-- Bagian Paragraf (Bahasa kasual, persahabatan, font mudah dibaca) -->
-        <div class="space-y-5 text-slate-300 font-sans leading-relaxed text-sm sm:text-base text-justify">
-            <p>Happy birthday! Nggak kerasa ya udah nambah umur aja hari ini. Rasanya baru kemarin kita ngobrol-ngobrol seru, eh sekarang kamu udah ulang tahun lagi aja. Pastinya aku tetep mau jadi salah satu orang yang ngucapin dan ngerayain hari spesial ini buat kamu.</p>
-    
-            <p>Semoga di umur yang baru ini, kamu makin gampang nemuin hal-hal yang bikin kamu happy. Kerjaannya makin lancar, rezekinya ngalir terus, dan kurang-kurangin tuh <i>overthinking</i>-nya. Kalau lagi capek atau pusing, jangan lupa istirahat ya. Jangan dipaksain terus, kesehatan sama kewarasanmu itu jauh lebih penting.</p>
-    
-            <p>Thanks ya udah selalu jadi temen cerita yang asik dan selalu ada. Semoga kita bisa terus temenan dan saling <i>support</i> kayak gini terus sampai kapanpun. Sekali lagi, selamat ulang tahun! Kapan-kapan kita nongkrong ya buat ngerayain. <i>Enjoy your day!</i></p>
+        <div class="text-slate-300 font-sans leading-relaxed text-sm sm:text-base text-justify min-h-[300px] sm:min-h-[220px]">
+            <span id="typed-text"></span>
         </div>
 
-        <!-- Bagian Penutup (Ubah dari yang sedih jadi suportif) -->
         <div class="mt-12 text-center font-serif italic text-slate-500 text-sm sm:text-base">
             <p>Teruslah bersinar dan jadi dirimu sendiri,</p>
             <p>Aku bakal selalu ada buat dukung kamu.🌷</p>
@@ -96,23 +92,34 @@
     <script>
         function startSequence() {
             const envelope = document.getElementById('envelope');
+            const flap = document.getElementById('flap');
+            const seal = document.getElementById('seal');
             const letter = document.getElementById('letter');
             const container = document.getElementById('flower-container');
+            const bgMusic = document.getElementById('bg-music');
 
-            envelope.style.opacity = '0';
-            envelope.style.transform = 'scale(0.9) translateY(20px)';
-            setTimeout(() => envelope.classList.add('hidden'), 700);
+            // Mencegah user klik dua kali
+            envelope.onclick = null;
 
+            // Memutar lagu secara otomatis begitu amplop diklik
+            bgMusic.play().catch(e => console.log("Lagu gagal diputar: ", e));
+
+            // 1. Hilangkan segel merah dan putar penutup (flap) amplop ke atas
+            seal.style.opacity = '0';
+            flap.style.transform = 'rotateX(180deg)';
+
+            // 2. Tunggu flap terbuka (800ms), lalu hilangkan amplop perlahan
+            setTimeout(() => {
+                envelope.style.opacity = '0';
+                envelope.style.transform = 'scale(0.9) translateY(20px)';
+                setTimeout(() => envelope.classList.add('hidden'), 700);
+            }, 800);
+
+            // 3. Mulai animasi bunga menjalar
             setTimeout(() => {
                 const flowerCount = 350; 
                 const flowers = [];
-
-                const imageUrls = [
-                    'flower_1.png', 
-                    'flower_2.png', 
-                    'flower_3.png'
-                ];
-
+                const imageUrls = ['flower_1.png', 'flower_2.png', 'flower_3.png'];
                 const sizes = ['w-24', 'w-32', 'w-44', 'w-56'];
 
                 for (let i = 0; i < flowerCount; i++) {
@@ -136,45 +143,56 @@
                     img.style.top = `${topVH}vh`;
                     img.style.setProperty('--rot', `${rot}deg`);
                     img.style.animationDelay = `${delay}s`;
-                    
                     img.style.zIndex = Math.floor(Math.random() * 100) + 40;
 
                     container.appendChild(img);
                     flowers.push(img);
                 }
 
-                // Setelah 5.5 detik (menunggu layar penuh sempurna)
+                // Setelah 5.5 detik layar penuh bunga
                 setTimeout(() => {
                     flowers.forEach(flower => {
-                        // KUNCI RAHASIA: Mematikan animasi awal dan "mengunci" gaya CSS-nya 
-                        // agar tidak berkedip saat jatuh
                         flower.style.opacity = '1';
                         flower.style.transform = `translate(-50%, -50%) rotate(${flower.style.getPropertyValue('--rot')})`;
-                        flower.style.animation = 'none'; // Hapus animasi lama
+                        flower.style.animation = 'none'; 
 
-                        const fallDelay = Math.random() * 2500; // Delay acak 0 - 2.5 detik (dalam milidetik)
+                        const fallDelay = Math.random() * 2500; 
 
-                        // Memicu animasi rontok yang mulus
                         setTimeout(() => {
-                            // Menggunakan transisi CSS alih-alih keyframes agar 100% nyambung dari posisi terakhir
                             flower.style.transition = 'transform 3s ease-in, opacity 3s ease-in';
                             flower.style.transform = `translate(-50%, 150vh) rotate(calc(${flower.style.getPropertyValue('--rot')} + 45deg))`;
                             flower.style.opacity = '0';
                         }, fallDelay);
                     });
 
-                    // Munculkan surat berbarengan saat bunga rontok
+                    // Munculkan surat 
                     setTimeout(() => {
                         letter.classList.remove('hidden');
                         void letter.offsetWidth; 
                         
                         letter.classList.remove('opacity-0', 'translate-y-24');
                         letter.classList.add('opacity-100', 'translate-y-0');
+
+                        // 4. Mulai animasi Ngetik setelah surat selesai naik ke atas
+                        setTimeout(() => {
+                            new Typed('#typed-text', {
+                                strings: [
+                                    `<p class="mb-5">Happy birthday! Nggak kerasa ya udah nambah umur aja hari ini. Rasanya baru kemarin kita ngobrol-ngobrol seru, eh sekarang kamu udah ulang tahun lagi aja. Pastinya aku tetep mau jadi salah satu orang yang ngucapin dan ngerayain hari spesial ini buat kamu.</p>
+                                     <p class="mb-5">Semoga di umur yang baru ini, kamu makin gampang nemuin hal-hal yang bikin kamu happy. Kerjaannya makin lancar, rezekinya ngalir terus, dan kurang-kurangin tuh <i class="italic">overthinking</i>-nya. Kalau lagi capek atau pusing, jangan lupa istirahat ya. Jangan dipaksain terus, kesehatan sama kewarasanmu itu jauh lebih penting.</p>
+                                     <p>Thanks ya udah selalu jadi temen cerita yang asik dan selalu ada. Semoga kita bisa terus temenan dan saling <i class="italic">support</i> kayak gini terus sampai kapanpun. Sekali lagi, selamat ulang tahun! Kapan-kapan kita nongkrong ya buat ngerayain. <i class="italic">Enjoy your day!</i></p>`
+                                ],
+                                typeSpeed: 30,         
+                                showCursor: true,      
+                                cursorChar: '|',       
+                                contentType: 'html'    
+                            });
+                        }, 1800); 
+
                     }, 1200); 
 
                 }, 5500); 
 
-            }, 400); 
+            }, 1200); 
         }
     </script>
 </body>

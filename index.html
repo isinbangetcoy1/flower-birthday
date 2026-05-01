@@ -101,13 +101,26 @@
             // Mencegah user klik dua kali
             envelope.onclick = null;
 
-            // Memutar lagu secara otomatis begitu amplop diklik
-            bgMusic.play().catch(e => console.log("Lagu gagal diputar: ", e));
+            // --- TRIK UNTUK BROWSER HP ---
+            // Pancing audio agar dimuat ke memori HP, set volume maksimal, lalu putar
+            bgMusic.volume = 1.0; 
+            bgMusic.load(); 
+            
+            let playPromise = bgMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("Lagu berhasil diputar");
+                }).catch(error => {
+                    console.log("Browser HP masih memblokir audio:", error);
+                });
+            }
+            // -------------------------------
 
             // 1. Hilangkan segel merah dan putar penutup (flap) amplop ke atas
             seal.style.opacity = '0';
             flap.style.transform = 'rotateX(180deg)';
 
+            // ... (biarkan sisa kodenya ke bawah sama seperti sebelumnya) ...
             // 2. Tunggu flap terbuka (800ms), lalu hilangkan amplop perlahan
             setTimeout(() => {
                 envelope.style.opacity = '0';
